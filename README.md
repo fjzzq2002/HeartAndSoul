@@ -16,6 +16,8 @@
 -- Gemini
 ```
 
+btw，这个仓库里的代码除了prompt基本都是Claude写的。有一些小bug我有空的时候再修修。
+
 ```
 python app.py
 ```
