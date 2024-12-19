@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>歌词创作助手</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .topic-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .topic {
+            font-size: 1.5em;
+            font-weight: bold;
+            flex-grow: 1;
+        }
+
+        .reroll-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2em;
+            padding: 5px;
+            color: #666;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            resize: vertical;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            transition: background-color 0.2s;
+        }
+
+        .action-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .feedback-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .reference-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="topic-section">
+            <div class="topic" id="current-topic">点击生成主题</div>
+            <button class="reroll-btn" onclick="rollTopic()">🎲</button>
+        </div>
+
+        <textarea id="lyrics-input" placeholder="在这里写下你的歌词..."></textarea>
+        
+        <button class="action-btn" onclick="evaluateLyrics()">评价</button>
+        
+        <div class="feedback-section" id="feedback-section">
+            <h3>评价与建议</h3>
+            <p id="feedback-text"></p>
+            <h3>改进版本</h3>
+            <p id="improved-text"></p>
+        </div>
+
+        <button class="action-btn" id="reference-btn" onclick="toggleReference()">例子</button>
+        
+        <div class="reference-section" id="reference-section">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>参考歌词</h3>
+                <button class="reroll-btn" onclick="rollLyrics()">🎲</button>
+            </div>
+            <p id="reference-text"></p>
+        </div>
+    </div>
+
+    <script>
+        let currentTopic = '';
+
+        async function rollTopic() {
+            try {
+                const response = await fetch('/api/roll_topic', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                currentTopic = data.topic;
+                document.getElementById('current-topic').textContent = currentTopic;
+                // Also roll new lyrics when topic changes
+                await rollLyrics();
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function rollLyrics() {
+            try {
+                const response = await fetch('/api/roll_lyrics', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ topic: currentTopic })
+                });
+                const data = await response.json();
+                document.getElementById('reference-text').textContent = data.lyrics;
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function evaluateLyrics() {
+            const lyricsInput = document.getElementById('lyrics-input').value;
+            if (!lyricsInput.trim()) {
+                alert('请先输入歌词');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/evaluate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        lyrics: lyricsInput,
+                        topic: currentTopic
+                    })
+                });
+                const data = await response.json();
+                
+                document.getElementById('feedback-text').textContent = data.feedback;
+                document.getElementById('improved-text').textContent = data.improved;
+                document.getElementById('feedback-section').style.display = 'block';
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function toggleReference() {
+            const referenceSection = document.getElementById('reference-section');
+            const referenceBtn = document.getElementById('reference-btn');
+            
+            if (referenceSection.style.display === 'none') {
+                referenceSection.style.display = 'block';
+                referenceBtn.textContent = '隐藏例子';
+                if (!document.getElementById('reference-text').textContent) {
+                    rollLyrics();
+                }
+            } else {
+                referenceSection.style.display = 'none';
+                referenceBtn.textContent = '例子';
+            }
+        }
+
+        // Initial topic roll when page loads
+        window.onload = rollTopic;
+    </script>
+</body>
+</html> 
