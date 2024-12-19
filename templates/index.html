@@ -4,9 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>歌词创作助手</title>
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,100..900;1,100..900&family=Noto+Serif+SC:wght@200..900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: 'Noto Serif SC', serif;
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
@@ -32,8 +37,28 @@
 
         .topic {
             font-size: 1.5em;
-            font-weight: bold;
+            font-weight: 600;
             flex-grow: 1;
+            cursor: pointer;
+        }
+
+        .topic-input {
+            font-size: 1.5em;
+            font-weight: 600;
+            font-family: 'Noto Serif SC', serif;
+            flex-grow: 1;
+            border: none;
+            background: transparent;
+            padding: 0;
+            margin: 0;
+            width: 100%;
+            outline: none;
+            border-bottom: 2px solid #007bff;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 5px;
         }
 
         .reroll-btn {
@@ -43,16 +68,23 @@
             font-size: 1.2em;
             padding: 5px;
             color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .reroll-btn i {
+            font-size: 1.4em;
         }
 
         textarea {
-            width: 100%;
+            width: calc(100% - 20px);
             min-height: 200px;
             padding: 10px;
-            margin: 10px 0;
             border: 1px solid #ddd;
             border-radius: 8px;
             font-size: 1em;
+            font-family: 'Noto Serif SC', serif;
             resize: vertical;
         }
 
@@ -63,33 +95,53 @@
             border: none;
             border-radius: 8px;
             font-size: 1.1em;
+            font-family: 'Noto Serif SC', serif;
             cursor: pointer;
             background-color: #007bff;
             color: white;
-            transition: background-color 0.2s;
+            transition: all 0.2s ease;
         }
 
         .action-btn:hover {
             background-color: #0056b3;
         }
 
+        .action-btn.is-loading {
+            background-color: #8f8f8f;
+            cursor: pointer;
+        }
+
+        .action-btn.is-loading:hover {
+            background-color: #8f8f8f;
+        }
+
+        .feedback-section, .reference-section {
+            margin-top: 10px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+
         .feedback-section {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            display: none;
+            margin-bottom: 30px;
         }
 
-        .reference-section {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            display: none;
+        .section-header {
+            margin-bottom: 15px;
         }
 
-        .loading {
+        .section-content {
+            margin-bottom: 15px;
+        }
+
+        .reroll-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 10px;
+        }
+
+        .element-loading {
             opacity: 0.5;
             pointer-events: none;
         }
@@ -103,58 +155,244 @@
                 padding: 15px;
             }
         }
+
+        .markdown-content {
+            white-space: pre-line;
+        }
+
+        .markdown-content p {
+            margin: 0.5em 0;
+        }
+
+        .markdown-content ul, .markdown-content ol {
+            margin: 0.5em 0;
+            padding-left: 1.5em;
+        }
+
+        .markdown-content blockquote {
+            margin: 0.5em 0;
+            padding-left: 1em;
+            border-left: 3px solid #ddd;
+            color: #666;
+        }
+
+        .settings-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+
+        .settings-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .settings-header:hover {
+            color: #333;
+        }
+
+        .settings-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .settings-content.visible {
+            display: block;
+        }
+
+        .api-key-input {
+            width: calc(100% - 20px);
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .settings-description {
+            font-size: 0.9em;
+            color: #666;
+            margin: 10px 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .attribution {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .attribution a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .attribution a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="topic-section">
-            <div class="topic" id="current-topic">点击生成主题</div>
-            <button class="reroll-btn" onclick="rollTopic()">🎲</button>
+            <div class="topic" id="current-topic" onclick="startEditingTopic()">&nbsp;</div>
+            <div class="button-group">
+                <button class="reroll-btn" onclick="startEditingTopic()"><i class='bx bx-edit-alt'></i></button>
+                <button class="reroll-btn" onclick="rollTopic()"><i class='bx bx-shuffle'></i></button>
+            </div>
         </div>
 
         <textarea id="lyrics-input" placeholder="在这里写下你的歌词..."></textarea>
         
-        <button class="action-btn" onclick="evaluateLyrics()">评价</button>
+        <button class="action-btn" id="evaluate-btn" onclick="evaluateLyrics()">评价</button>
         
         <div class="feedback-section" id="feedback-section">
-            <h3>评价与建议</h3>
-            <p id="feedback-text"></p>
-            <h3>改进版本</h3>
-            <p id="improved-text"></p>
+            <h3 class="section-header">评价与建议</h3>
+            <div id="feedback-text" class="markdown-content"></div>
+            <div class="reroll-row">
+                <button class="reroll-btn" onclick="evaluateLyrics()"><i class='bx bx-revision'></i></button>
+            </div>
         </div>
 
         <button class="action-btn" id="reference-btn" onclick="toggleReference()">例子</button>
         
         <div class="reference-section" id="reference-section">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h3>参考歌词</h3>
-                <button class="reroll-btn" onclick="rollLyrics()">🎲</button>
+            <h3 class="section-header">参考歌词</h3>
+            <div id="reference-text" class="section-content markdown-content"></div>
+            <div class="reroll-row">
+                <button class="reroll-btn" onclick="rollLyrics()"><i class='bx bx-revision'></i></button>
             </div>
-            <p id="reference-text"></p>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-header" onclick="toggleSettings()">
+                <i class='bx bx-cog'></i>
+                <span>设置 API Key</span>
+            </div>
+            <div class="settings-content" id="settings-content">
+                <div class="settings-description">
+                    需要 Gemini API Key 才能使用此应用。
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">点击这里获取</a>
+                </div>
+                <input type="password" 
+                       class="api-key-input" 
+                       id="api-key-input" 
+                       placeholder="输入你的 Gemini API Key"
+                       onchange="saveApiKey(this.value)">
+            </div>
         </div>
     </div>
 
     <script>
-        let currentTopic = '';
+        let currentTopic = localStorage.getItem('currentTopic') || '夏天等待暴雨来临之前的片刻';
 
+        // Save lyrics to localStorage whenever it changes
+        document.getElementById('lyrics-input').addEventListener('input', function(e) {
+            localStorage.setItem('currentLyrics', e.target.value);
+        });
+
+        function startEditingTopic() {
+            const topicDiv = document.getElementById('current-topic');
+            const currentText = topicDiv.textContent;
+            topicDiv.innerHTML = `<input type="text" class="topic-input" value="${currentText}" onblur="finishEditingTopic(this)" onkeypress="handleTopicKeyPress(event, this)">`;
+            const input = topicDiv.querySelector('input');
+            input.focus();
+            input.select();
+        }
+
+        function handleTopicKeyPress(event, input) {
+            if (event.key === 'Enter') {
+                finishEditingTopic(input);
+            }
+        }
+
+        function finishEditingTopic(input) {
+            const newTopic = input.value.trim();
+            if (newTopic) {
+                currentTopic = newTopic;
+                localStorage.setItem('currentTopic', currentTopic);
+                document.getElementById('current-topic').textContent = currentTopic;
+            } else {
+                document.getElementById('current-topic').textContent = currentTopic || '点击生成主题';
+            }
+        }
+
+        function toggleSettings() {
+            const content = document.getElementById('settings-content');
+            content.classList.toggle('visible');
+        }
+
+        function saveApiKey(key) {
+            if (key.trim()) {
+                localStorage.setItem('geminiApiKey', key.trim());
+            }
+        }
+
+        // Initialize settings
+        window.addEventListener('DOMContentLoaded', function() {
+            const savedKey = localStorage.getItem('geminiApiKey');
+            if (savedKey) {
+                document.getElementById('api-key-input').value = savedKey;
+            }
+        });
+
+        // Add API key to all API requests
+        async function fetchWithApiKey(url, options = {}) {
+            const apiKey = localStorage.getItem('geminiApiKey');
+            if (!apiKey) {
+                alert('请先在设置中输入 Gemini API Key');
+                toggleSettings();
+                throw new Error('No API key');
+            }
+            
+            options.headers = {
+                ...options.headers,
+                'X-Gemini-Api-Key': apiKey
+            };
+            
+            return fetch(url, options);
+        }
+
+        // Update all API calls to use fetchWithApiKey
         async function rollTopic() {
             try {
-                const response = await fetch('/api/roll_topic', {
+                const response = await fetchWithApiKey('/api/roll_topic', {
                     method: 'POST'
                 });
                 const data = await response.json();
                 currentTopic = data.topic;
+                localStorage.setItem('currentTopic', currentTopic);
                 document.getElementById('current-topic').textContent = currentTopic;
-                // Also roll new lyrics when topic changes
-                await rollLyrics();
             } catch (error) {
                 console.error('Error:', error);
             }
         }
 
         async function rollLyrics() {
+            if (!currentTopic) {
+                return;
+            }
             try {
-                const response = await fetch('/api/roll_lyrics', {
+                const referenceSection = document.getElementById('reference-section');
+                const referenceText = document.getElementById('reference-text');
+                const referenceBtn = document.getElementById('reference-btn');
+                
+                referenceBtn.classList.add('is-loading');
+                referenceBtn.textContent = '生成中...';
+                
+                referenceText.innerHTML = '';
+                referenceSection.style.display = 'none';
+                
+                const response = await fetchWithApiKey('/api/roll_lyrics', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -162,9 +400,15 @@
                     body: JSON.stringify({ topic: currentTopic })
                 });
                 const data = await response.json();
-                document.getElementById('reference-text').textContent = data.lyrics;
+                
+                referenceText.innerHTML = marked.parse(data.lyrics);
+                referenceSection.style.display = 'block';
+                referenceBtn.textContent = '例子';
             } catch (error) {
                 console.error('Error:', error);
+                referenceBtn.textContent = '例子';
+            } finally {
+                referenceBtn.classList.remove('is-loading');
             }
         }
 
@@ -176,7 +420,17 @@
             }
 
             try {
-                const response = await fetch('/api/evaluate', {
+                const feedbackSection = document.getElementById('feedback-section');
+                const feedbackText = document.getElementById('feedback-text');
+                const evaluateBtn = document.getElementById('evaluate-btn');
+                
+                evaluateBtn.classList.add('is-loading');
+                evaluateBtn.textContent = '评价中...';
+                
+                feedbackText.innerHTML = '';
+                feedbackSection.style.display = 'none';
+                
+                const response = await fetchWithApiKey('/api/evaluate', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -188,11 +442,14 @@
                 });
                 const data = await response.json();
                 
-                document.getElementById('feedback-text').textContent = data.feedback;
-                document.getElementById('improved-text').textContent = data.improved;
-                document.getElementById('feedback-section').style.display = 'block';
+                feedbackText.innerHTML = marked.parse(data.feedback);
+                feedbackSection.style.display = 'block';
+                evaluateBtn.textContent = '评价';
             } catch (error) {
                 console.error('Error:', error);
+                evaluateBtn.textContent = '评价';
+            } finally {
+                evaluateBtn.classList.remove('is-loading');
             }
         }
 
@@ -200,20 +457,28 @@
             const referenceSection = document.getElementById('reference-section');
             const referenceBtn = document.getElementById('reference-btn');
             
-            if (referenceSection.style.display === 'none') {
-                referenceSection.style.display = 'block';
-                referenceBtn.textContent = '隐藏例子';
-                if (!document.getElementById('reference-text').textContent) {
-                    rollLyrics();
-                }
+            if (referenceSection.style.display === 'none' || !referenceSection.style.display) {
+                rollLyrics();  // This will handle showing the section and button states
             } else {
                 referenceSection.style.display = 'none';
                 referenceBtn.textContent = '例子';
             }
         }
 
-        // Initial topic roll when page loads
-        window.onload = rollTopic;
+        // Initialize the UI with stored topic and lyrics or get a new one
+        window.onload = function() {
+            if (currentTopic) {
+                document.getElementById('current-topic').textContent = currentTopic;
+            } else {
+                rollTopic();
+            }
+            
+            // Restore saved lyrics if they exist
+            const savedLyrics = localStorage.getItem('currentLyrics');
+            if (savedLyrics) {
+                document.getElementById('lyrics-input').value = savedLyrics;
+            }
+        }
     </script>
 </body>
 </html> 
